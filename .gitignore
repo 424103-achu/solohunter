@@ -1,0 +1,39 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+.vite/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database artifacts
+database/*.sqlite
+database/*.db
+database/*.bak
+
+# IDE/Editor folders
+.vscode/
+.idea/
+
+# Misc
+coverage/
+public/static/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore generated files
+solo-hunter-rpg/client/public/assets/

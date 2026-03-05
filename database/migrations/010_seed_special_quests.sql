@@ -1,0 +1,8 @@
+-- Seed special quests for solo_hunter_rpg
+INSERT INTO quests (title, description, difficulty, xp_reward, skill_reward, quest_type, niche_id, is_ai_generated, is_active, test_cases, starter_code)
+VALUES
+  ('Reverse Linked List', 'Given a singly linked list, reverse it. ---EXAMPLES---\nInput: 1->2->3->4\nOutput: 4->3->2->1', 'medium', 200, 3, 'special', NULL, FALSE, TRUE, '[{"input": [1,2,3,4], "output": [4,3,2,1]}]', 'function reverseLinkedList(head) { /* your code */ }'),
+  ('Find Cycle in Graph', 'Detect if a cycle exists in a directed graph. ---EXAMPLES---\nInput: [[0,1],[1,2],[2,0]]\nOutput: true', 'hard', 300, 5, 'special', NULL, FALSE, TRUE, '[{"input": [[0,1],[1,2],[2,0]], "output": true}]', 'function hasCycle(edges) { /* your code */ }'),
+  ('Longest Substring Without Repeating', 'Find the length of the longest substring without repeating characters. ---EXAMPLES---\nInput: "abcabcbb"\nOutput: 3', 'medium', 220, 4, 'special', NULL, FALSE, TRUE, '[{"input": "abcabcbb", "output": 3}]', 'function lengthOfLongestSubstring(s) { /* your code */ }'),
+  ('Merge Intervals', 'Given an array of intervals, merge all overlapping intervals. ---EXAMPLES---\nInput: [[1,3],[2,6],[8,10],[15,18]]\nOutput: [[1,6],[8,10],[15,18]]', 'medium', 210, 3, 'special', NULL, FALSE, TRUE, '[{"input": [[1,3],[2,6],[8,10],[15,18]], "output": [[1,6],[8,10],[15,18]]}]', 'function mergeIntervals(intervals) { /* your code */ }'),
+  ('Binary Tree Level Order', 'Return the level order traversal of a binary tree. ---EXAMPLES---\nInput: [3,9,20,null,null,15,7]\nOutput: [[3],[9,20],[15,7]]', 'hard', 320, 6, 'special', NULL, FALSE, TRUE, '[{"input": [3,9,20,null,null,15,7], "output": [[3],[9,20],[15,7]]}]', 'function levelOrder(root) { /* your code */ }');
