@@ -36,7 +36,7 @@ const QuestPage = () => {
       case 'boss': list = bossQuests; break;
       case 'main': list = quests.filter((q) => q.quest_type === 'main'); break;
       case 'special': list = quests.filter((q) => q.quest_type === 'special'); break;
-      default: list = quests.filter((q) => q.quest_type !== 'fitness');
+      default: list = quests.filter((q) => q.quest_type !== 'fitness' && q.quest_type !== 'yoga');
     }
     if (difficulty !== 'all') list = list.filter((q) => q.difficulty === difficulty);
     if (search.trim()) {

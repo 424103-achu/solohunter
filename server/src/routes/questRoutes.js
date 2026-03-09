@@ -7,12 +7,14 @@ import {
   fetchDailyQuests,
   fetchBossQuests,
   fetchQuestsByType,
+  generateGroqDailyQuests,
 } from "../controllers/questController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/", protect, createNewQuest);
+router.post("/grok/generate", protect, generateGroqDailyQuests);
 router.get("/", fetchAllQuests);
 router.get("/available", protect, fetchAvailableQuests);
 router.get("/daily", protect, fetchDailyQuests);

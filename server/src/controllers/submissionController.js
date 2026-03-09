@@ -2,8 +2,9 @@
 import { createSubmission, updateSubmission, getSubmissionsByUser, getSubmissionsByQuest, hasPassedQuest } from '../models/submissionModel.js';
 import { getQuestById, getQuestsByType } from '../models/questModel.js';
 import { findUserById } from '../models/userModel.js';
-import { executeCode, runCode, evaluateAgainstDescription } from '../services/judgeService.js';
-import { evaluateLocally, runLocally } from '../services/localEvaluator.js';
+import { evaluateAgainstDescription } from '../services/judgeService.js';
+import { evaluateLocally } from '../services/localEvaluator.js';
+import { evaluateWithTestCases, runSandbox } from '../services/codeRunner.js';
 import { grantXp, calculateXpReward, updateStreak } from '../services/xpService.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import logger from '../utils/logger.js';
@@ -31,15 +32,32 @@ export const submitCode = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Block re-submission if already completed
+    const alreadyPassedEarly = await hasPassedQuest(req.user.id, questId);
+    if (alreadyPassedEarly) {
+      return res.json({
+        success: true,
+        passed: true,
+        alreadyCompleted: true,
+        message: 'You have already completed this quest.',
+      });
+    }
+
     // Create submission record
     const submission = await createSubmission(req.user.id, questId, code, language);
 
-    // Evaluate code: use local evaluator if quest has test_cases, otherwise fall back to Gemini
+    // Evaluate code based on quest type
     let executionResult;
-    if (quest.test_cases && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
-      logger.info(`Using LOCAL evaluator for quest: ${quest.title}`);
+    if (quest.is_ai_generated && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
+      // Groq AI quest — run with user-selected language (not quest.language)
+      logger.info(`Using codeRunner for Groq quest: ${quest.title} (${language})`);
+      executionResult = await evaluateWithTestCases(code, language, quest.test_cases);
+    } else if (quest.test_cases && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
+      // Legacy JS quest — use VM sandbox evaluator
+      logger.info(`Using local JS evaluator for quest: ${quest.title}`);
       executionResult = evaluateLocally(code, quest.test_cases);
     } else {
+      // No test cases — Gemini description evaluation fallback
       logger.info(`Using Gemini AI evaluator for quest: ${quest.title}`);
       executionResult = await evaluateAgainstDescription(code, language, quest.description);
     }
@@ -50,27 +68,16 @@ export const submitCode = async (req, res) => {
     let newBadges = [];
 
     if (executionResult.passed) {
-      // Check if already passed (no double XP)
-      const alreadyPassed = await hasPassedQuest(req.user.id, questId);
+      // Calculate XP with bonuses
+      const isNicheMatch = quest.niche_id && quest.niche_id === user.niche_id;
+      const xpEarned = calculateXpReward(quest.xp_reward, {
+        currentStreak: user.current_streak || 0,
+        isNicheMatch,
+      });
 
-      let xpEarned = 0;
-      if (!alreadyPassed) {
-        // Calculate XP with bonuses
-        const isNicheMatch = quest.niche_id && quest.niche_id === user.niche_id;
-        xpEarned = calculateXpReward(quest.xp_reward, {
-          currentStreak: user.current_streak || 0,
-          isNicheMatch,
-        });
-
-        // Grant XP and handle level up
-        xpResult = await grantXp(req.user.id, xpEarned);
-
-        // Update streak
-        streakResult = await updateStreak(req.user.id);
-
-        // Check for new badges
-        newBadges = await checkAndAwardBadges(req.user.id);
-      }
+      xpResult = await grantXp(req.user.id, xpEarned);
+      streakResult = await updateStreak(req.user.id);
+      newBadges = await checkAndAwardBadges(req.user.id);
 
       // Update submission
       await updateSubmission(submission.id, {
@@ -84,7 +91,7 @@ export const submitCode = async (req, res) => {
       return res.json({
         success: true,
         passed: true,
-        alreadyCompleted: alreadyPassed,
+        alreadyCompleted: false,
         submission: { id: submission.id, status: 'passed' },
         testResults: executionResult,
         xp: xpResult,
@@ -120,6 +127,7 @@ const updateQuestStats = async (userId, questType) => {
   const typeColumn = {
     coding: 'coding_quests_completed',
     fitness: 'fitness_quests_completed',
+    yoga: 'fitness_quests_completed',
     boss: 'boss_quests_completed',
     boost: 'boost_quests_completed',
     fun: 'fun_quests_completed',
@@ -232,9 +240,102 @@ export const getFitnessQuests = async (req, res) => {
 };
 
 /**
- * Run code without submitting (sandbox execution)
- * Uses local execution — no Gemini needed
+ * Get available yoga quests
  */
+export const getYogaQuests = async (req, res) => {
+  try {
+    const quests = await getQuestsByType('yoga');
+    res.json(quests);
+  } catch (err) {
+    logger.error('GET YOGA QUESTS ERROR:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Complete a yoga quest (timer-based, no code required)
+ */
+export const completeYogaQuest = async (req, res) => {
+  try {
+    const { questId, duration } = req.body;
+    if (!questId) return res.status(400).json({ message: 'Quest ID is required' });
+
+    const quest = await getQuestById(questId);
+    if (!quest) return res.status(404).json({ message: 'Quest not found' });
+    if (quest.quest_type !== 'yoga') return res.status(400).json({ message: 'This endpoint is for yoga quests only' });
+
+    const user = await findUserById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const alreadyPassed = await hasPassedQuest(req.user.id, questId);
+
+    const log = `Yoga quest completed. Duration: ${duration || 0}s`;
+    const submission = await createSubmission(req.user.id, questId, log, 'yoga');
+    await updateSubmission(submission.id, { status: 'passed', score: 100, execution_time: duration || 0 });
+
+    let xpResult = null;
+    let streakResult = null;
+    let newBadges = [];
+
+    if (!alreadyPassed) {
+      const xpEarned = calculateXpReward(quest.xp_reward, { currentStreak: user.current_streak || 0, isNicheMatch: false });
+      xpResult = await grantXp(req.user.id, xpEarned);
+      streakResult = await updateStreak(req.user.id);
+      newBadges = await checkAndAwardBadges(req.user.id);
+    }
+
+    await updateQuestStats(req.user.id, 'yoga');
+
+    return res.json({
+      success: true,
+      passed: true,
+      alreadyCompleted: alreadyPassed,
+      submission: { id: submission.id, status: 'passed' },
+      xp: xpResult,
+      streak: streakResult,
+      newBadges,
+      quest: { id: quest.id, title: quest.title, xp_reward: quest.xp_reward, skill_reward: quest.skill_reward },
+    });
+  } catch (err) {
+    logger.error('COMPLETE YOGA QUEST ERROR:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+};
+
+/**
+ * Run code without submitting (sandbox execution)
+ * Runs code locally for all supported languages
+ */
+/**
+ * Check code against all test cases WITHOUT saving to DB or awarding XP.
+ * Used by the RUN button to preview results before the user chooses to submit.
+ */
+export const checkCode = async (req, res) => {
+  try {
+    const { questId, code, language = 'javascript' } = req.body;
+    if (!questId || !code) {
+      return res.status(400).json({ message: 'Quest ID and code are required' });
+    }
+
+    const quest = await getQuestById(questId);
+    if (!quest) return res.status(404).json({ message: 'Quest not found' });
+
+    let executionResult;
+    if (quest.is_ai_generated && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
+      executionResult = await evaluateWithTestCases(code, language, quest.test_cases);
+    } else if (quest.test_cases && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
+      executionResult = evaluateLocally(code, quest.test_cases);
+    } else {
+      executionResult = await evaluateAgainstDescription(code, language, quest.description);
+    }
+
+    res.json({ checked: true, passed: executionResult.passed, testResults: executionResult });
+  } catch (err) {
+    logger.error('CHECK CODE ERROR:', err);
+    res.status(500).json({ message: err.message || 'Code check failed' });
+  }
+};
+
 export const executeCodeSandbox = async (req, res) => {
   try {
     const { code, language = 'javascript', stdin = '' } = req.body;
@@ -243,13 +344,7 @@ export const executeCodeSandbox = async (req, res) => {
       return res.status(400).json({ message: 'Code is required' });
     }
 
-    // Use local runner for JavaScript, fall back to Gemini for other languages
-    if (language === 'javascript') {
-      const result = runLocally(code);
-      return res.json(result);
-    }
-
-    const result = await runCode(code, language, stdin);
+    const result = await runSandbox(code, language, stdin);
     res.json(result);
   } catch (err) {
     logger.error('EXECUTE CODE ERROR:', err);
@@ -279,6 +374,20 @@ export const getQuestSubmissions = async (req, res) => {
     res.json(submissions);
   } catch (err) {
     logger.error('GET QUEST SUBMISSIONS ERROR:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Check if the current user has already completed a quest
+ */
+export const getQuestStatus = async (req, res) => {
+  try {
+    const { questId } = req.params;
+    const completed = await hasPassedQuest(req.user.id, questId);
+    res.json({ completed });
+  } catch (err) {
+    logger.error('GET QUEST STATUS ERROR:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };

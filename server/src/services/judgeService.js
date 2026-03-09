@@ -40,27 +40,6 @@ Respond with EXACTLY this JSON structure (no other text):
 };
 
 /**
- * Build a sandbox evaluation prompt for running code without test cases
- */
-const buildRunPrompt = (code, language, stdin) => {
-  return `You are a code execution simulator. Mentally execute the following ${language} code and return what it would output to stdout.
-
-${stdin ? `Stdin input: ${stdin}` : 'No stdin input.'}
-
-Code:
-\`\`\`${language}
-${code}
-\`\`\`
-
-Respond with EXACTLY this JSON structure (no other text, no markdown fences):
-{
-  "stdout": "the output the code prints",
-  "stderr": "any error messages or empty string",
-  "status": "Success" or "Runtime Error" or "Compilation Error" or "Timeout"
-}`;
-};
-
-/**
  * Parse Gemini response - handles markdown fences and raw JSON
  */
 const parseGeminiJSON = (text) => {
@@ -203,36 +182,4 @@ export const executeCode = async (code, language, testCases) => {
   }
 };
 
-/**
- * Quick code execution simulation via Gemini (sandbox mode)
- */
-export const runCode = async (code, language, stdin = '') => {
-  if (!GEMINI_ENABLED) {
-    throw new Error('Gemini API key not configured. Set GEMINI_API_KEY in .env');
-  }
 
-  const prompt = buildRunPrompt(code, language, stdin);
-
-  try {
-    const response = await model.generateContent(prompt);
-    const text = response.response.text();
-    const parsed = parseGeminiJSON(text);
-
-    return {
-      stdout: (parsed.stdout || '').trim(),
-      stderr: parsed.stderr || '',
-      status: parsed.status || 'Unknown',
-      executionTime: null,
-      memoryUsed: null,
-    };
-  } catch (err) {
-    logger.error('Gemini run error:', err.message);
-    return {
-      stdout: '',
-      stderr: `Evaluation error: ${err.message}`,
-      status: 'Error',
-      executionTime: null,
-      memoryUsed: null,
-    };
-  }
-};

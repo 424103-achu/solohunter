@@ -19,19 +19,6 @@ export const getRank = (level) => {
   return 'E';
 };
 
-export const getRankInfo = (level) => {
-  for (const threshold of RANK_THRESHOLDS) {
-    if (level >= threshold.minLevel) {
-      return threshold;
-    }
-  }
-  return RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1];
-};
-
-export const getRankByName = (rank) => {
-  return RANK_THRESHOLDS.find((t) => t.rank === rank) || RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1];
-};
-
 // Get max difficulty a rank can access
 export const getMaxDifficulty = (rank) => {
   switch (rank) {

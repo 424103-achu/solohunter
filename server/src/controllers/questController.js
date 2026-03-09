@@ -6,6 +6,7 @@ import {
   getQuestsByNiche,
 } from "../models/questModel.js";
 import { getAvailableQuests, getDailyQuests, getBossQuests } from "../services/questEngineService.js";
+import logger from "../utils/logger.js";
 
 export const createNewQuest = async (req, res) => {
   try {
@@ -98,5 +99,19 @@ export const fetchQuestsByType = async (req, res) => {
   } catch (err) {
     console.error("FETCH QUESTS BY TYPE ERROR:", err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * POST /quests/grok/generate
+ * Returns today's daily quests for the user (generates via Groq on first call of the day).
+ */
+export const generateGroqDailyQuests = async (req, res) => {
+  try {
+    const quests = await getDailyQuests(req.user.id);
+    res.json(quests);
+  } catch (err) {
+    logger.error("GROQ GENERATE QUESTS ERROR:", err);
+    res.status(500).json({ message: err.message || "Server error" });
   }
 };

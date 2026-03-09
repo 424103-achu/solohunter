@@ -101,7 +101,7 @@ export const getLeaderboard = async (sortBy = 'xp', limit = 50) => {
   const validSorts = {
     xp: 'u.xp DESC',
     level: 'u.level DESC, u.xp DESC',
-    streak: 'us.current_streak DESC',
+    streak: 'us.current_streak DESC NULLS LAST',
   };
   const orderBy = validSorts[sortBy] || validSorts.xp;
 

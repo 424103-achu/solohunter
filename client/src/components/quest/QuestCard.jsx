@@ -5,7 +5,8 @@ import { FiChevronRight, FiStar, FiLock } from 'react-icons/fi';
 
 const isFitnessQuest = (quest) =>
   quest.quest_type === 'fitness' ||
-  /push-?ups|plank|squat|hiit|cardio|stretch|workout|pull-?up|core/i.test(quest.title || '');
+  quest.quest_type === 'yoga' ||
+  /push-?ups|plank|squat|hiit|cardio|stretch|workout|pull-?up|core|yoga|pranayama/i.test(quest.title || '');
 
 const getDescriptionPreview = (desc = '') => {
   const idx = desc.indexOf('---EXAMPLES---');
@@ -16,10 +17,10 @@ const QuestCard = ({ quest, userLevel = 1 }) => {
   const diffConfig = getDifficultyConfig(quest.difficulty);
   const typeConfig = QUEST_TYPES[quest.quest_type] || QUEST_TYPES.main;
   const locked = quest.required_level > userLevel;
-  const completed = quest.already_completed;
+  const completed = quest.already_completed || quest.completed;
   const fitness = isFitnessQuest(quest);
 
-  const questLink = locked ? '#' : fitness ? '/fitness' : `/quest/${quest.id}`;
+  const questLink = locked ? '#' : fitness ? `/fitness?questId=${quest.id}` : `/quest/${quest.id}`;
 
   return (
     <Link
@@ -62,8 +63,12 @@ const QuestCard = ({ quest, userLevel = 1 }) => {
           </p>
 
           {fitness && (
-            <span className="inline-block mt-1 text-[10px] font-system tracking-wider px-2 py-0.5 rounded bg-success/10 text-success border border-success/20">
-              🏋️ FITNESS
+            <span className={`inline-block mt-1 text-[10px] font-system tracking-wider px-2 py-0.5 rounded border ${
+              quest.quest_type === 'yoga'
+                ? 'bg-warning/10 text-warning border-warning/20'
+                : 'bg-success/10 text-success border-success/20'
+            }`}>
+              {quest.quest_type === 'yoga' ? '🧘 YOGA' : '🏋️ FITNESS'}
             </span>
           )}
 

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { FiZap, FiTrendingUp, FiAward, FiTarget, FiActivity, FiStar, FiShield, FiBook, FiCpu, FiWind } from 'react-icons/fi';
-import { RANK_THRESHOLDS, getRankColor } from '../utils/rankUtils';
+import { RANK_THRESHOLDS } from '../utils/rankUtils';
 
 const fadeIn = (delay = 0) => ({
   initial: { opacity: 0, y: 12 },
@@ -204,8 +204,11 @@ const InfoPage = () => {
           <div className="p-2 border border-primary/10 rounded bg-primary/5">
             <p className="text-text-primary font-semibold text-xs mb-1">📋 Daily Quests</p>
             <p className="text-[11px] text-text-muted">
-              3 quests assigned each day — <span className="text-secondary">2 coding</span> + <span className="text-success">1 fitness</span>.
+              3 quests assigned each day — <span className="text-secondary">2 AI coding</span> + <span className="text-success">1 fitness</span>.
               Complete them before reset to keep your streak going.
+            </p>
+            <p className="text-[11px] text-text-muted mt-1">
+              AI Coding: <span className="text-secondary">Easy 45 XP · 1 SP &nbsp;|&nbsp; Medium 90 XP · 3 SP &nbsp;|&nbsp; Hard 150 XP · 5 SP</span>
             </p>
           </div>
           <div className="p-2 border border-primary/10 rounded bg-primary/5">
@@ -213,11 +216,22 @@ const InfoPage = () => {
             <p className="text-[11px] text-text-muted">
               Browse all available coding quests. Filter by difficulty (Easy / Medium / Hard) and tackle them anytime for XP.
             </p>
+            <p className="text-[11px] text-text-muted mt-1">
+              Rewards: <span className="text-secondary">Easy 45 XP · 1 SP &nbsp;|&nbsp; Medium 90 XP · 3 SP &nbsp;|&nbsp; Hard 150 XP · 5 SP</span>
+            </p>
           </div>
           <div className="p-2 border border-primary/10 rounded bg-primary/5">
             <p className="text-text-primary font-semibold text-xs mb-1">🏋️ Fitness Quests</p>
             <p className="text-[11px] text-text-muted">
-              Physical training challenges with a built-in timer. Complete the exercise to earn XP and prove you're not just a keyboard warrior.
+              Physical training challenges with a built-in timer. Complete the exercise to earn XP.
+              Rewards: <span className="text-success">Easy 20 XP • Medium 30 XP • Hard 50 XP</span>.
+            </p>
+          </div>
+          <div className="p-2 border border-primary/10 rounded bg-primary/5">
+            <p className="text-text-primary font-semibold text-xs mb-1">🧘 Yoga Quests</p>
+            <p className="text-[11px] text-text-muted">
+              Traditional Indian yoga techniques — pranayama, asanas, and meditation. Timer-based completion.
+              Rewards: <span className="text-warning">Easy 20 XP • Medium 30 XP • Hard 50 XP</span>.
             </p>
           </div>
           <div className="p-2 border border-primary/10 rounded bg-primary/5">
@@ -318,6 +332,18 @@ const InfoPage = () => {
               <p className="system-tag text-[8px]">Daily Reset</p>
               <p className="text-text-muted">3 new quests each day</p>
               <p className="text-text-muted">2 Coding + 1 Fitness</p>
+            </div>
+            <div className="p-3 border border-primary/10 rounded bg-primary/5 space-y-1">
+              <p className="system-tag text-[8px]">AI Coding Quest XP</p>
+              <p className="text-text-muted">Easy: 45 XP · 1 SP</p>
+              <p className="text-text-muted">Medium: 90 XP · 3 SP</p>
+              <p className="text-text-muted">Hard: 150 XP · 5 SP</p>
+            </div>
+            <div className="p-3 border border-primary/10 rounded bg-primary/5 space-y-1">
+              <p className="system-tag text-[8px]">Fitness / Yoga Quest XP</p>
+              <p className="text-text-muted">Easy: 20 XP</p>
+              <p className="text-text-muted">Medium: 30 XP</p>
+              <p className="text-text-muted">Hard: 50 XP</p>
             </div>
           </div>
         </div>

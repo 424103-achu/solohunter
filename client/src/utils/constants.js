@@ -13,16 +13,3 @@ export const LANGUAGES = [
   { id: 'typescript', label: 'TypeScript', monacoId: 'typescript' },
 ];
 
-export const STAT_ICONS = {
-  strength: '💪',
-  intelligence: '🧠',
-  agility: '⚡',
-};
-
-export const NICHE_ICONS = {
-  Frontend: '🎨',
-  Backend: '⚙️',
-  DSA: '🧮',
-  DevOps: '🚀',
-  'Full Stack': '🔥',
-};

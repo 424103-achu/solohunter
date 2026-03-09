@@ -8,15 +8,6 @@ export const RANK_THRESHOLDS = [
   { rank: 'E', minLevel: 1, color: '#95A5A6', title: 'Novice Hunter', bgGradient: 'from-gray-600 to-slate-400' },
 ];
 
-export const getRankInfo = (level) => {
-  for (const threshold of RANK_THRESHOLDS) {
-    if (level >= threshold.minLevel) {
-      return threshold;
-    }
-  }
-  return RANK_THRESHOLDS[RANK_THRESHOLDS.length - 1];
-};
-
 export const getRankColor = (rank) => {
   const info = RANK_THRESHOLDS.find((t) => t.rank === rank);
   return info?.color || '#95A5A6';
