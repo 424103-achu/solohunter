@@ -2,7 +2,6 @@
 import { createSubmission, updateSubmission, getSubmissionsByUser, getSubmissionsByQuest, hasPassedQuest } from '../models/submissionModel.js';
 import { getQuestById, getQuestsByType } from '../models/questModel.js';
 import { findUserById } from '../models/userModel.js';
-import { evaluateAgainstDescription } from '../services/judgeService.js';
 import { evaluateLocally } from '../services/localEvaluator.js';
 import { evaluateWithTestCases, runSandbox } from '../services/codeRunner.js';
 import { grantXp, calculateXpReward, updateStreak } from '../services/xpService.js';
@@ -57,9 +56,7 @@ export const submitCode = async (req, res) => {
       logger.info(`Using local JS evaluator for quest: ${quest.title}`);
       executionResult = evaluateLocally(code, quest.test_cases);
     } else {
-      // No test cases — Gemini description evaluation fallback
-      logger.info(`Using Gemini AI evaluator for quest: ${quest.title}`);
-      executionResult = await evaluateAgainstDescription(code, language, quest.description);
+      return res.status(400).json({ message: 'Quest has no test cases and cannot be evaluated.' });
     }
 
     // Calculate XP if passed
@@ -326,7 +323,7 @@ export const checkCode = async (req, res) => {
     } else if (quest.test_cases && Array.isArray(quest.test_cases) && quest.test_cases.length > 0) {
       executionResult = evaluateLocally(code, quest.test_cases);
     } else {
-      executionResult = await evaluateAgainstDescription(code, language, quest.description);
+      return res.status(400).json({ message: 'Quest has no test cases and cannot be evaluated.' });
     }
 
     res.json({ checked: true, passed: executionResult.passed, testResults: executionResult });

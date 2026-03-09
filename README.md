@@ -11,7 +11,7 @@ A full-stack gamified coding + fitness RPG platform inspired by *Solo Leveling*.
 | Database  | PostgreSQL                                           |
 | Auth      | JWT (jsonwebtoken) + bcrypt                          |
 | Code Exec | Native sandbox (Python/Java via child_process spawn) |
-| AI        | Groq AI (quest generation) + Google Gemini (eval fallback) |
+| AI        | Groq AI (quest generation) |
 
 ## Features
 
@@ -52,7 +52,7 @@ solo-hunter-rpg/
 │       └── utils/        # Rank, XP, difficulty utilities
 ├── server/            # Express backend
 │   └── src/
-│       ├── config/       # DB, Gemini, Groq config
+│       ├── config/       # DB, Groq config
 │       ├── controllers/  # Route handlers
 │       ├── jobs/         # Cron jobs (daily quest reset, weekly boss)
 │       ├── middleware/   # Auth, error handler, rate limiter
@@ -70,7 +70,6 @@ solo-hunter-rpg/
 - Node.js 18+
 - PostgreSQL 14+
 - Groq API key (free at console.groq.com)
-- Google Gemini API key (optional — used as evaluation fallback)
 
 ### 1. Clone & Install
 
@@ -116,7 +115,6 @@ PORT=5000
 DATABASE_URL=postgresql://user:password@localhost:5432/solo_hunter_rpg
 JWT_SECRET=your-secret-key
 GROQ_API_KEY=your-groq-key
-GEMINI_API_KEY=your-gemini-key   # optional
 CLIENT_URL=http://localhost:5173
 ```
 
@@ -158,6 +156,36 @@ npm run dev
 | POST   | /api/skills/unlock                | Unlock a skill                     |
 | GET    | /api/stats                        | Get full stats                     |
 | GET    | /api/leaderboard                  | Get rankings (?sort=xp|level|streak) |
+
+## Code Evaluation
+
+Submitted code is evaluated entirely on the server — no third-party judge API required.
+
+### Groq AI quests (Python / Java / C++ / JS)
+
+1. Your code is written to a **temp file** on the server (`os.tmpdir()`)
+2. A **real subprocess** is spawned via `child_process.spawn`:
+   - Python → `python -u solution.py`
+   - Java → `javac Main.java` then `java -cp tmpDir Main`
+   - C++ → `g++ solution.cpp -o output` then `./output`
+   - JS → `node solution.js`
+3. Each test case's `input` is piped into the process's **stdin**
+4. `stdout` is captured and **exact-string compared** (trimmed) against `expected_output`
+5. **10-second timeout** — process is killed if exceeded
+6. Temp folder is deleted after every run
+7. All test cases must pass for the quest to be marked complete
+
+### Legacy JS quests (seeded DSA quests)
+
+Run directly in Node's **`vm` module** (sandboxed JS context, no subprocess).  
+Test cases use function-call expressions like `twoSum([2,7,11,15], 9)` evaluated against your code. JavaScript only, 3-second timeout.
+
+| | Groq AI quests | Legacy JS quests |
+|---|---|---|
+| Execution | OS subprocess | Node.js `vm` sandbox |
+| Languages | Python, Java, JS, C++ | JavaScript only |
+| Input | `stdin` pipe | Function call expression |
+| Timeout | 10 s | 3 s |
 
 ## Rank Tiers
 
