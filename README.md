@@ -1,30 +1,41 @@
 # Solo Hunter RPG
 
-A full-stack gamified coding RPG platform inspired by *Solo Leveling*. Level up your coding skills by completing quests, earning XP, unlocking skill trees, and climbing the hunter rankings.
+A full-stack gamified coding + fitness RPG platform inspired by *Solo Leveling*. Level up your real-world skills by completing AI-generated coding quests, physical fitness/yoga challenges, and boss battles — earning XP, unlocking skill trees, and climbing the hunter rankings.
 
 ## Tech Stack
 
-| Layer     | Technology                                     |
-| --------- | ---------------------------------------------- |
-| Frontend  | React 19, Vite 6, Tailwind CSS v4, Monaco Editor |
-| Backend   | Node.js, Express 5                             |
-| Database  | PostgreSQL                                     |
-| Auth      | JWT (jsonwebtoken) + bcrypt                    |
-| Code Exec | Judge0 CE (RapidAPI)                           |
-| AI        | Google Gemini (optional)                       |
+| Layer     | Technology                                           |
+| --------- | ---------------------------------------------------- |
+| Frontend  | React 19, Vite 6, Tailwind CSS v4, Monaco Editor     |
+| Backend   | Node.js, Express 5                                   |
+| Database  | PostgreSQL                                           |
+| Auth      | JWT (jsonwebtoken) + bcrypt                          |
+| Code Exec | Native sandbox (Python/Java via child_process spawn) |
+| AI        | Groq AI (quest generation) + Google Gemini (eval fallback) |
 
 ## Features
 
 - **Rank System** — E → D → C → B → A → S ranks based on level
 - **XP & Leveling** — Earn XP from quests with streak/niche/stat bonuses
-- **Quests** — Daily, Main, Special, and Boss quest types
-- **Code Execution** — Real-time code submission via Judge0 with test case validation
+- **Quest Types** — Daily (2 AI coding + 1 fitness), Quest Board, Fitness, Yoga, Boss
+- **AI-Generated Quests** — Groq generates 2 personalized coding quests daily based on your stats
+- **Code Execution** — Multi-language sandbox (Python, Java) with test case validation
 - **Skill Trees** — Unlock skills per niche specialization (Frontend, Backend, DSA, DevOps, Full Stack)
 - **Combat Stats** — Allocate Strength, Intelligence, Agility points per level up
-- **Streaks** — Consecutive daily quest completion rewards
+- **Fitness & Yoga** — Timer-based challenges with a full-screen workout UI; completes quest on timer finish
+- **Streaks** — Consecutive daily completion rewards; +5% XP/day up to +50% at 10 days
 - **Badges** — Achievement system for milestones
-- **Leaderboard** — Sort by XP, level, or streak
-- **Fitness Challenges** — Optional physical workout timers
+- **Leaderboard** — Sort by XP, level, or streak (streak sorted NULLS LAST)
+- **System Guide** — In-app info page covering all mechanics
+
+## XP Rewards
+
+| Quest Type      | Easy    | Medium   | Hard     |
+| --------------- | ------- | -------- | -------- |
+| AI Coding       | 45 XP · 1 SP | 90 XP · 3 SP | 150 XP · 5 SP |
+| Fitness / Yoga  | 20 XP   | 30 XP    | 50 XP    |
+
+Skill Points (SP): +3 per level up, +1 per 7-day streak milestone.
 
 ## Project Structure
 
@@ -32,7 +43,7 @@ A full-stack gamified coding RPG platform inspired by *Solo Leveling*. Level up 
 solo-hunter-rpg/
 ├── client/            # React + Vite frontend
 │   └── src/
-│       ├── components/   # UI, quest, skill, stats, layout components
+│       ├── components/   # UI, quest, fitness, skill, stats, layout components
 │       ├── context/      # Auth, User, Quest context providers
 │       ├── hooks/        # Custom React hooks
 │       ├── pages/        # Route pages
@@ -41,14 +52,14 @@ solo-hunter-rpg/
 │       └── utils/        # Rank, XP, difficulty utilities
 ├── server/            # Express backend
 │   └── src/
-│       ├── config/       # DB, Judge0, Gemini config
+│       ├── config/       # DB, Gemini, Groq config
 │       ├── controllers/  # Route handlers
-│       ├── jobs/         # Cron jobs (daily/weekly)
-│       ├── middleware/    # Auth, error handler, rate limiter
+│       ├── jobs/         # Cron jobs (daily quest reset, weekly boss)
+│       ├── middleware/   # Auth, error handler, rate limiter
 │       ├── models/       # Database query functions
 │       ├── routes/       # Express route definitions
-│       ├── services/     # Business logic services
-│       └── utils/        # Logger, rank calc, difficulty selector
+│       ├── services/     # Business logic (XP, quests, skills, badges, code runner)
+│       └── utils/        # Logger, rank calculator, difficulty selector
 └── database/          # SQL schema, migrations, seeds
 ```
 
@@ -58,7 +69,8 @@ solo-hunter-rpg/
 
 - Node.js 18+
 - PostgreSQL 14+
-- Judge0 CE API key (RapidAPI)
+- Groq API key (free at console.groq.com)
+- Google Gemini API key (optional — used as evaluation fallback)
 
 ### 1. Clone & Install
 
@@ -86,22 +98,26 @@ psql -d solo_hunter_rpg -f database/migrations/003_quests.sql
 psql -d solo_hunter_rpg -f database/migrations/004_submissions.sql
 psql -d solo_hunter_rpg -f database/migrations/005_badges.sql
 psql -d solo_hunter_rpg -f database/migrations/006_stats.sql
+psql -d solo_hunter_rpg -f database/migrations/007_combat_stats.sql
+psql -d solo_hunter_rpg -f database/migrations/008_quest_test_cases.sql
 
 # Seed data
 psql -d solo_hunter_rpg -f database/seed.sql
+psql -d solo_hunter_rpg -f database/migrations/009_seed_dsa_quests.sql
+psql -d solo_hunter_rpg -f database/migrations/010_seed_special_quests.sql
 ```
 
 ### 3. Environment Variables
 
-Copy `server/.env.example` to `server/.env` and fill in:
+Create `server/.env`:
 
 ```env
 PORT=5000
 DATABASE_URL=postgresql://user:password@localhost:5432/solo_hunter_rpg
 JWT_SECRET=your-secret-key
-JUDGE0_API_KEY=your-rapidapi-key
-JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
-GEMINI_API_KEY=your-gemini-key  # optional
+GROQ_API_KEY=your-groq-key
+GEMINI_API_KEY=your-gemini-key   # optional
+CLIENT_URL=http://localhost:5173
 ```
 
 ### 4. Run
@@ -116,35 +132,43 @@ npm run dev
 
 ## API Endpoints
 
-| Method | Endpoint                  | Description             |
-| ------ | ------------------------- | ----------------------- |
-| POST   | /api/auth/register        | Create account          |
-| POST   | /api/auth/login           | Login                   |
-| GET    | /api/users/me             | Current user profile    |
-| PUT    | /api/users/profile        | Update profile          |
-| POST   | /api/users/niche          | Select niche            |
-| POST   | /api/users/stats/allocate | Allocate stat points    |
-| GET    | /api/quests               | All quests              |
-| GET    | /api/quests/available     | Level-appropriate quests|
-| GET    | /api/quests/daily         | Daily quests            |
-| GET    | /api/quests/boss          | Boss quests             |
-| POST   | /api/submissions/submit   | Submit code solution    |
-| POST   | /api/submissions/run      | Run code (sandbox)      |
-| GET    | /api/skills/tree          | Get skill tree          |
-| POST   | /api/skills/unlock        | Unlock a skill          |
-| GET    | /api/stats                | Get full stats          |
-| GET    | /api/leaderboard          | Get rankings            |
+| Method | Endpoint                          | Description                        |
+| ------ | --------------------------------- | ---------------------------------- |
+| POST   | /api/auth/register                | Create account                     |
+| POST   | /api/auth/login                   | Login                              |
+| GET    | /api/user/me                      | Current user profile               |
+| PUT    | /api/user/profile                 | Update username                    |
+| POST   | /api/user/niche                   | Select specialization              |
+| POST   | /api/user/stats/allocate          | Allocate stat points               |
+| GET    | /api/user/badges                  | User's earned badges               |
+| GET    | /api/quests                       | All quests                         |
+| GET    | /api/quests/available             | Level-appropriate quests           |
+| GET    | /api/quests/daily                 | Today's daily quests               |
+| GET    | /api/quests/boss                  | Boss quests                        |
+| GET    | /api/quests/type/:type            | Quests by type (fitness, yoga, …)  |
+| POST   | /api/quests/grok/generate         | Force daily quest regeneration     |
+| POST   | /api/submissions/submit           | Submit code solution               |
+| POST   | /api/submissions/check            | Check code (no XP)                 |
+| POST   | /api/submissions/run              | Run code in sandbox                |
+| GET    | /api/submissions/fitness          | Get fitness quests                 |
+| POST   | /api/submissions/fitness/complete | Complete a fitness quest           |
+| GET    | /api/submissions/yoga             | Get yoga quests                    |
+| POST   | /api/submissions/yoga/complete    | Complete a yoga quest              |
+| GET    | /api/skills/tree                  | Get skill tree                     |
+| POST   | /api/skills/unlock                | Unlock a skill                     |
+| GET    | /api/stats                        | Get full stats                     |
+| GET    | /api/leaderboard                  | Get rankings (?sort=xp|level|streak) |
 
 ## Rank Tiers
 
 | Rank | Level Range | Title                 |
 | ---- | ----------- | --------------------- |
-| E    | 1–10        | Novice Hunter         |
-| D    | 11–20       | Skilled Hunter        |
-| C    | 21–35       | Veteran Hunter        |
-| B    | 36–50       | Elite Hunter          |
-| A    | 51–75       | National Level Hunter |
-| S    | 76+         | Shadow Monarch        |
+| E    | 1–4         | Novice Hunter         |
+| D    | 5–9         | Skilled Hunter        |
+| C    | 10–17       | Veteran Hunter        |
+| B    | 18–25       | Elite Hunter          |
+| A    | 26–37       | National Level Hunter |
+| S    | 38+         | Shadow Monarch        |
 
 ## License
 
